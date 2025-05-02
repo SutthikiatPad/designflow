@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตารางเวลาและสถานะ</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .completed {
+            color: green;
+            font-weight: bold;
+        }
+        .pending {
+            color: red;
+            font-weight: bold;
+        }
+        .waiting-remove {
+            color: orange;
+            font-weight: bold;
+        }
+        .delete-btn {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .edit-btn {
+            background-color: blue;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>คำนวณเวลาและแสดงในตาราง</h2>
+
+    <label for="type">ประเภท:</label>
+    <select id="type">
+        <option value="MINI">MINI</option>
+        <option value="MVP">MVP</option>
+    </select>
+
+    <label for="name">ชื่อ:</label>
+    <select id="name">
+        <!-- รายชื่อจะถูกเพิ่มในนี้ผ่าน JavaScript -->
+    </select>
+
+    <label for="hh">ชั่วโมง:</label>
+    <input type="number" id="hh" placeholder="00">
+    
+    <label for="mm">นาที:</label>
+    <input type="number" id="mm" placeholder="03">
+    
+    <label for="ss">วินาที:</label>
+    <input type="number" id="ss" placeholder="12">
+    
+    <button onclick="addTimeToTable()">เพิ่มเวลา</button>
+
+    <h3>เวลาปัจจุบัน: <span id="currentTime"></span></h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>ชื่อ</th>
+                <th>เวลาที่กำหนด</th>
+                <th>เวลาที่ได้</th>
+                <th>สถานะ</th>
+                <th>การกระทำ</th>
+            </tr>
+        </thead>
+        <tbody id="timeTable">
+            <!-- ข้อมูลเวลาจะถูกเพิ่มตรงนี้ -->
+        </tbody>
+    </table>
+
+    <h3>ประวัติ:</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>ชื่อ</th>
+                <th>เวลาที่กำหนด</th>
+                <th>เวลาที่ได้</th>
+                <th>สถานะ</th>
+                <th>ลบ</th>
+            </tr>
+        </thead>
+        <tbody id="historyTable">
+            <!-- ประวัติจะถูกแสดงตรงนี้ -->
+        </tbody>
+    </table>
+
+    <script>
+        const nameOptions = {
+            MINI: [
+                "Dragonfly", "Eclipse", "Ghostring", "Mastering", "Toad", "KingDramoh", "Deviling",
+                "Angeling", "Vagabond Wolf", "DarkPriest", "Chimera", "Mysteltain", "Necromancer", "Ogretooth",
+                "NaghtSieger", "Coelacanth", "Skeggiold", "Observation", "GoldQueenScaraba"
+            ],
+            MVP: [
+                "Phreeoni", "Mistress", "Eddga", "Kraken", "OrcHero", "Maya", "Pharaoh", "OrcLord", "AmonRa",
+                "Doppelganger", "Morroc", "TimeHolder", "TaoGunka", "LostDragon", "Lordofthedead", "FallenBishop",
+                "ArcAngeling", "Gioia", "RSX-0806", "Nidhoggr'sShadow"
+            ]
+        };
+
+        // ฟังก์ชันนี้จะใช้ในการเติมข้อมูลลงใน dropdownlist ชื่อ
+        function updateNameOptions() {
+            const typeSelect = document.getElementById("type");
+            const nameSelect = document.getElementById("name");
+            const selectedType = typeSelect.value;
+            
+            // ลบข้อมูลเก่าก่อน
+            nameSelect.innerHTML = "";
+
+            // เติมข้อมูลใหม่ตามประเภทที่เลือก
+            const options = nameOptions[selectedType];
+            options.forEach(name => {
+                const option = document.createElement("option");
+                option.value = name;
+                option.text = name;
+                nameSelect.appendChild(option);
+            });
+        }
+
+        // ฟังก์ชันที่เรียกเมื่อเลือกประเภท
+        document.getElementById("type").addEventListener("change", updateNameOptions);
+
+        // เรียกใช้เพื่อเติมข้อมูลเมื่อโหลดหน้า
+        window.onload = function() {
+            updateNameOptions();
+            setInterval(updateCurrentTime, 1000);
+            loadHistory();
+        };
+
+        function updateCurrentTime() {
+            let now = new Date();
+            document.getElementById("currentTime").innerText = now.toLocaleTimeString("th-TH");
+        }
+
+
+        function addTimeToTable() {
+            let name = document.getElementById("name").value.trim();
+            let hours = parseInt(document.getElementById("hh").value) || 0;
+            let minutes = parseInt(document.getElementById("mm").value) || 0;
+            let seconds = parseInt(document.getElementById("ss").value) || 0;
+
+            // ตรวจสอบชื่อว่าไม่ว่างเปล่า
+            if (!name) {
+                alert("กรุณากรอกชื่อ");
+                return;
+            }
+
+            let now = new Date();
+            let targetTime = new Date(now);
+            targetTime.setHours(now.getHours() + hours);
+            targetTime.setMinutes(now.getMinutes() + minutes);
+            targetTime.setSeconds(now.getSeconds() + seconds);
+
+            // ตรวจสอบว่าเวลาไม่สามารถน้อยกว่าเวลาปัจจุบันได้
+            if (targetTime < now) {
+                alert("เวลาไม่สามารถน้อยกว่าเวลาปัจจุบันได้");
+                return;
+            }
+
+            let table = document.getElementById("timeTable");
+            let row = table.insertRow();
+            let indexCell = row.insertCell(0);
+            let nameCell = row.insertCell(1);
+            let inputCell = row.insertCell(2);
+            let resultCell = row.insertCell(3);
+            let statusCell = row.insertCell(4);
+            let actionCell = row.insertCell(5);
+
+            indexCell.innerText = table.rows.length;
+            nameCell.innerText = name;
+            inputCell.innerText = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            resultCell.innerText = targetTime.toLocaleTimeString("th-TH");
+            statusCell.innerText = "รอเวลา...";
+            statusCell.classList.add("pending");
+
+            // เพิ่มปุ่ม "ลบ" และ "แก้ไข"
+            let deleteBtn = document.createElement("button");
+            deleteBtn.innerText = "ลบ";
+            deleteBtn.classList.add("delete-btn");
+            deleteBtn.onclick = () => deleteTime(row);
+            actionCell.appendChild(deleteBtn);
+
+            let editBtn = document.createElement("button");
+            editBtn.innerText = "แก้ไข";
+            editBtn.classList.add("edit-btn");
+            editBtn.onclick = () => editTime(row);
+            actionCell.appendChild(editBtn);
+
+            checkStatus(row, targetTime);
+			//เพิ่ม code
+			sortTimeTable();
+        }
+
+        function checkStatus(row, targetTime) {
+            let statusCell = row.cells[4];
+
+            function updateStatus() {
+                let now = new Date();
+                if (now >= targetTime) {
+                    let countdown = 10;
+                    statusCell.innerText = `บอสเกิดแล้ว (ลบใน ${countdown} วินาที)`;
+                    statusCell.classList.remove("pending");
+                    statusCell.classList.add("waiting-remove");
+
+                    let countdownInterval = setInterval(() => {
+                        countdown--;
+                        statusCell.innerText = `บอสเกิดแล้ว (ลบใน ${countdown} วินาที)`;
+                        if (countdown <= 0) {
+                            clearInterval(countdownInterval);
+                            row.remove();
+                            saveToHistory(row); // เก็บข้อมูลประวัติ
+                        }
+                    }, 1000);
+                } else {
+                    setTimeout(updateStatus, 1000);
+                }
+            }
+            updateStatus();
+        }
+
+        function saveToHistory(row) {
+            let historyTable = document.getElementById("historyTable");
+            let historyRow = historyTable.insertRow();
+            for (let i = 0; i < row.cells.length; i++) {
+                let cell = historyRow.insertCell(i);
+                cell.innerText = row.cells[i].innerText;
+            }
+
+            // เพิ่มปุ่มลบ
+            let deleteCell = historyRow.insertCell();
+            let deleteBtn = document.createElement("button");
+            deleteBtn.innerText = "ลบ";
+            deleteBtn.classList.add("delete-btn");
+            deleteBtn.onclick = () => deleteHistoryRow(historyRow);
+            deleteCell.appendChild(deleteBtn);
+
+            updateHistoryData();
+        }
+
+        function deleteTime(row) {
+            row.remove();
+        }
+
+        function editTime(row) {
+            let nameCell = row.cells[1];
+            let inputCell = row.cells[2];
+            let hours = prompt("กรุณากรอกชั่วโมงใหม่", inputCell.innerText.split(":")[0]);
+            let minutes = prompt("กรุณากรอกนาทีใหม่", inputCell.innerText.split(":")[1]);
+            let seconds = prompt("กรุณากรอกวินาทีใหม่", inputCell.innerText.split(":")[2]);
+
+            if (hours !== null && minutes !== null && seconds !== null) {
+                inputCell.innerText = `${hours}:${minutes}:${seconds}`;
+                // คำนวณเวลาใหม่
+                let now = new Date();
+                let targetTime = new Date(now);
+                targetTime.setHours(now.getHours() + parseInt(hours));
+                targetTime.setMinutes(now.getMinutes() + parseInt(minutes));
+                targetTime.setSeconds(now.getSeconds() + parseInt(seconds));
+                row.cells[3].innerText = targetTime.toLocaleTimeString("th-TH");
+            }
+        }
+
+        function deleteHistoryRow(row) {
+            let historyTable = document.getElementById("historyTable");
+            historyTable.deleteRow(row.rowIndex - 1);
+            updateHistoryData();
+        }
+
+        function updateHistoryData() {
+            let historyTable = document.getElementById("historyTable");
+            let historyData = [];
+            let rows = historyTable.rows;
+            for (let i = 0; i < rows.length; i++) {
+                let rowData = [];
+                for (let j = 0; j < rows[i].cells.length - 1; j++) { // ยกเว้นคอลัมน์ "ลบ"
+                    rowData.push(rows[i].cells[j].innerText);
+                }
+                historyData.push(rowData);
+            }
+            localStorage.setItem("historyData", JSON.stringify(historyData));
+        }
+
+        // โหลดประวัติจาก localStorage เมื่อโหลดหน้า
+        function loadHistory() {
+            let historyData = localStorage.getItem("historyData");
+            if (historyData) {
+                historyData = JSON.parse(historyData);
+                let historyTable = document.getElementById("historyTable");
+                historyData.forEach(data => {
+                    let historyRow = historyTable.insertRow();
+                    data.forEach(value => {
+                        let cell = historyRow.insertCell();
+                        cell.innerText = value;
+                    });
+                    // เพิ่มปุ่มลบในแต่ละแถว
+                    let deleteCell = historyRow.insertCell();
+                    let deleteBtn = document.createElement("button");
+                    deleteBtn.innerText = "ลบ";
+                    deleteBtn.classList.add("delete-btn");
+                    deleteBtn.onclick = () => deleteHistoryRow(historyRow);
+                    deleteCell.appendChild(deleteBtn);
+                });
+            }
+        }
+		function sortTimeTable() {
+					let table = document.getElementById("timeTable");
+					let rows = Array.from(table.rows);
+
+					rows.sort((rowA, rowB) => {
+					let timeA = new Date("1970/01/01 " + rowA.cells[3].innerText);
+					let timeB = new Date("1970/01/01 " + rowB.cells[3].innerText);
+					return timeA - timeB; // เรียงจากน้อยไปมาก (ascending)
+				});
+
+					// ล้างข้อมูลเก่าก่อนเพิ่มแถวที่เรียงใหม่
+					table.innerHTML = "";
+    
+					// เพิ่มแถวใหม่และอัปเดต index
+					rows.forEach((row, index) => {
+					row.cells[0].innerText = index + 1; // อัปเดตเลขลำดับ #
+					table.appendChild(row);
+				});
+		}
+
+    </script>
+
+</body>
+</html>
